@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
     MYSQL_ROW row;
 
     struct connection_details mysqlDetails;
-    mysqlDetails.server = "localhost";
+    mysqlDetails.server = "mysql";
     mysqlDetails.user = "rest_user";
     mysqlDetails.password = "password123";
     mysqlDetails.database = "rest_db_cpp";

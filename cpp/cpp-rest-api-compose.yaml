@@ -1,0 +1,8 @@
+version: "3.9"
+
+services:
+  cpp_rest_api:
+    image: cpp_rest_api:latest
+    ports:
+      - "5000:5000"
+

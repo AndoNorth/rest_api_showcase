@@ -43,13 +43,15 @@ RUN mkdir -p bin && make
 # =========================
 # Runtime stage
 # =========================
-FROM alpine:3.19
+FROM debian:bookworm-slim
 
-# Install runtime dependencies only
-RUN apk add --no-cache \
-    libstdc++ \
-    boost-system \
-    mariadb-connector-c
+RUN apt-get update && apt-get install -y \
+    libstdc++6 \
+    libboost-system1.74.0 \
+    libmariadb3 \
+    libssl3 \
+    zlib1g \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create app directory
 WORKDIR /app
@@ -59,6 +61,7 @@ COPY --from=builder /app/bin/rest_api ./rest_api
 
 # Expose your API port
 EXPOSE 5000
+
 
 # Run the server
 CMD ["./rest_api"]
