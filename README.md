@@ -11,7 +11,7 @@ docker stack deploy -c db-compose REST
 ```
 ### cpp
 ```sh
-docker build -f ./cpp/Dockerfile -t cpp_rest_api
+docker build ./cpp -f ./cpp/Dockerfile -t cpp_rest_api
 docker stack deploy -c ./cpp/cpp-rest-api-compose.yaml REST
 ```
 

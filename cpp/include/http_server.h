@@ -6,6 +6,8 @@
 #include <SimpleJSON/json.hpp>
 #include <served/multiplexer.hpp>
 #include <served/net/server.hpp>
+#include <sql_driver.h>
+
 
 constexpr char kEndpoint[] = "/videos/{id:\\d+}";
 constexpr char kIpAddress[] = "0.0.0.0";
@@ -15,59 +17,115 @@ constexpr int kThreads = 10;
 class HttpServer
 {
 public:
-    HttpServer(served::multiplexer multiplexer) : multiplexer(multiplexer) {}
+    HttpServer(served::multiplexer multiplexer, MYSQL *db_conn)
+        : multiplexer(multiplexer), db_conn(db_conn) {}
 
     served::served_req_handler HandleGet()
     {
-        return [&](served::response &response, const served::request &request)
+        return [this](served::response &response, const served::request &request)
         {
-            std::cout << "GET request recieve for id:" << request.params["id"] << std::endl;
-            json::JSON request_body = json::JSON::Load(request.body());
-            /*
-            json::JSON video_reponse = json::JSON::Load("get response");
-            std::ostringstream stream;
-            stream << video_reponse;
-            response << stream.str();
-            */
-            bool get_successful = true;
-            get_successful ? served::response::stock_reply(201, response)
-                           : served::response::stock_reply(404, response);
+            int id = std::stoi(request.params["id"]);
+            std::ostringstream query;
+            query << "SELECT * FROM videos WHERE id=" << id;
+
+            MYSQL_RES *res = mysql_execute_query(db_conn, query.str().c_str());
+            MYSQL_ROW row = mysql_fetch_row(res);
+
+            if (row != NULL)
+            {
+                json::JSON video;
+                video["id"] = std::stoi(row[0]);
+                video["name"] = row[1];
+                video["likes"] = std::stoi(row[2]);
+                video["views"] = std::stoi(row[3]);
+
+                std::ostringstream stream;
+                stream << video;
+                response << stream.str();
+                response.set_header("Content-Type", "application/json");
+                response.set_status(200);
+            }
+            else
+            {
+                response.set_status(404);
+                response << "Video not found";
+            }
+
+            mysql_free_result(res);
         };
     }
 
     served::served_req_handler HandlePut()
     {
-        return [&](served::response &response, const served::request &request)
+        return [this](served::response &response, const served::request &request)
         {
-            std::cout << "PUT request recieve for id:" << request.params["id"] << std::endl;
-            json::JSON request_body = json::JSON::Load(request.body());
-            bool insert_successful = true;
-            insert_successful ? served::response::stock_reply(200, response)
-                              : served::response::stock_reply(404, response);
+            int id = std::stoi(request.params["id"]);
+            json::JSON body = json::JSON::Load(request.body());
+
+            std::ostringstream query;
+            query << "REPLACE INTO videos (id, name, likes, views) VALUES ("
+                  << id << ", '"
+                  << body["name"].ToString() << "', "
+                  << body["likes"].ToInt() << ", "
+                  << body["views"].ToInt() << ")";
+
+            mysql_execute_query(db_conn, query.str().c_str());
+
+            response.set_status(200);
+            response << "Video created/updated";
         };
     }
 
     served::served_req_handler HandlePost()
     {
-        return [&](served::response &response, const served::request &request)
+        return [this](served::response &response, const served::request &request)
         {
-            std::cout << "POST request recieve for id:" << request.params["id"] << std::endl;
-            json::JSON request_body = json::JSON::Load(request.body());
-            bool update_successful = true;
-            update_successful ? served::response::stock_reply(200, response)
-                              : served::response::stock_reply(404, response);
+            int id = std::stoi(request.params["id"]);
+            json::JSON body = json::JSON::Load(request.body());
+
+            std::ostringstream query;
+            query << "UPDATE videos SET ";
+            bool first = true;
+
+            if (body.hasKey("name"))
+            {
+                query << "name='" << body["name"].ToString() << "'";
+                first = false;
+            }
+            if (body.hasKey("likes"))
+            {
+                if (!first) query << ", ";
+                query << "likes=" << body["likes"].ToInt();
+                first = false;
+            }
+            if (body.hasKey("views"))
+            {
+                if (!first) query << ", ";
+                query << "views=" << body["views"].ToInt();
+            }
+
+            query << " WHERE id=" << id;
+
+            mysql_execute_query(db_conn, query.str().c_str());
+
+            response.set_status(200);
+            response << "Video updated";
         };
     }
 
     served::served_req_handler HandleDelete()
     {
-        return [&](served::response &response, const served::request &request)
+        return [this](served::response &response, const served::request &request)
         {
-            std::cout << "DELETE request recieve for id:" << request.params["id"] << std::endl;
-            json::JSON request_body = json::JSON::Load(request.body());
-            bool delete_successful = true;
-            delete_successful ? served::response::stock_reply(200, response)
-                              : served::response::stock_reply(404, response);
+            int id = std::stoi(request.params["id"]);
+
+            std::ostringstream query;
+            query << "DELETE FROM videos WHERE id=" << id;
+
+            mysql_execute_query(db_conn, query.str().c_str());
+
+            response.set_status(200);
+            response << "Video deleted";
         };
     }
 
@@ -95,5 +153,6 @@ public:
     }
 
 private:
-    served::multiplexer multiplexer;
+    served::multiplexer &multiplexer;
+    MYSQL *db_conn;
 };
