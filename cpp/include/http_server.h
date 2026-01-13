@@ -18,7 +18,7 @@ constexpr int kThreads = 10;
 class HttpServer
 {
 public:
-    HttpServer(served::multiplexer multiplexer, MYSQL *db_conn)
+    HttpServer(served::multiplexer &multiplexer, MYSQL *db_conn)
         : multiplexer(multiplexer), db_conn(db_conn) {}
 
     served::served_req_handler HandleGetAll()
@@ -40,7 +40,7 @@ public:
 
             MYSQL_ROW row;
                 
-            bool has_rows;
+            bool has_rows = false;
             json::JSON videos = json::JSON::Make(json::JSON::Class::Array);
 
             while ((row = mysql_fetch_row(res)) != NULL)
