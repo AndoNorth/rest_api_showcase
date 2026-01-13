@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
     mysqlDetails.database = "rest_db_cpp";
 
     con = mysql_connection_setup(mysqlDetails);
-    res = mysql_execute_query(con, "select * from videos");
+    res = mysql_execute_query(con, "SELECT * FROM videos");
 
     std::cout << "Displaying database output:"
               << std::endl;
