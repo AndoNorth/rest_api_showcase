@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-LANGUAGES=("python" "cpp" "javascript")
+LANGUAGES=("cpp" "rust")
 DB_PREFIX="rest_db"
 DB_USER="rest_user"
 DB_PASSWORD="password123"

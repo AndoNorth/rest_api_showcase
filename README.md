@@ -14,6 +14,11 @@ docker stack deploy -c db-compose.yaml REST
 docker build ./cpp -f ./cpp/Dockerfile -t cpp_rest_api
 docker stack deploy -c ./cpp/cpp-rest-api-compose.yaml REST
 ```
+### rust
+```sh
+docker build ./rust -f ./rust/Dockerfile -t rust_rest_api
+docker stack deploy -c ./rust/rust-rest-api-compose.yaml REST
+```
 ### curl
 ```sh
 # get all
