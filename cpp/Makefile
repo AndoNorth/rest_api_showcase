@@ -1,23 +1,20 @@
-CXX		  := g++
-CXX_FLAGS := -std=c++17
+CXX := g++
+CXXFLAGS := -std=c++17 -Wall -Wno-pessimizing-move -O2
 
-BIN		:= bin
-SRC		:= src/*.cpp $(shell find $(lib) -name *.cpp)
-INCLUDE	:= -Iinclude -Ilib
-LIB		:= lib
+BIN := bin
+EXECUTABLE := rest_api
 
-LIBRARIES	:= -lboost_system -lpthread -lmariadbclient
-EXECUTABLE	:= rest_api
+SRC := src/main.cpp src/app/app.cpp src/http/http_server.cpp src/db/db.cpp $(shell find lib -name "*.cpp")
+INCLUDE := -Iinclude -Ilib
 
+LIBRARIES := -lboost_system -lpthread -lmariadbclient
 
 all: $(BIN)/$(EXECUTABLE)
 
-run: clean all
-	clear
-	./$(BIN)/$(EXECUTABLE)
-
 $(BIN)/$(EXECUTABLE): $(SRC)
-	$(CXX) $(CXX_FLAGS) $(INCLUDE) -L$(LIB) $^ -o $@ $(LIBRARIES)
+	@mkdir -p $(BIN)
+	$(CXX) $(CXXFLAGS) $(INCLUDE) $^ -o $@ $(LIBRARIES)
 
 clean:
-	-rm $(BIN)/$(EXECUTABLE)
+	rm -rf $(BIN)
+

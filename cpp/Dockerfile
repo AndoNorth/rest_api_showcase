@@ -37,8 +37,8 @@ RUN mkdir -p lib/SimpleJSON && \
 
 # -------------------------
 # Build
-# -------------------------
-RUN mkdir -p bin && make
+RUN cmake -S . -B build \
+ && cmake --build build --target rest_api
 
 # =========================
 # Runtime stage
@@ -56,13 +56,8 @@ RUN apt-get update && apt-get install -y \
 # Create app directory
 WORKDIR /app
 
-# Copy binary from builder
-COPY --from=builder /app/bin/rest_api ./rest_api
+COPY --from=builder /app/build/rest_api ./rest_api
 
-# Expose your API port
 EXPOSE 5000
-
-
-# Run the server
 CMD ["./rest_api"]
 
