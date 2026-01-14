@@ -1,0 +1,7 @@
+version: "3.9"
+
+services:
+  js_rest_api:
+    image: js_rest_api:latest
+    ports:
+      - "5000:5000"

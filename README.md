@@ -5,7 +5,6 @@ This project is just to showcase interchangable backend of different languages i
 ## Helpful commands
 ### mysql
 ```sh
-# db
 docker compose -f db-compose.yaml pull
 docker stack deploy -c db-compose.yaml REST
 ```
@@ -18,6 +17,11 @@ docker stack deploy -c ./cpp/cpp-rest-api-compose.yaml REST
 ```sh
 docker build ./rust -f ./rust/Dockerfile -t rust_rest_api
 docker stack deploy -c ./rust/rust-rest-api-compose.yaml REST
+```
+### javascript
+```sh
+docker build ./javascript -f ./javascript/Dockerfile -t js_rest_api
+docker stack deploy -c ./javascript/js-rest-api-compose.yaml REST
 ```
 ### curl
 ```sh
