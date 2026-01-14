@@ -1,14 +1,12 @@
-const Joi = require("joi"); // npm i joi@13.1.0
-const express = require("express"); // npm i express
-const bodyParser = require("body-parser"); // npm i body-parser
-const { createPool } = require("mysql"); // npm i mysql
+const Joi = require("joi");
+const express = require("express");
+const bodyParser = require("body-parser");
+const { createPool } = require("mysql2");
 
 const app = express();
 
-const jsonParser = bodyParser.json();
-app.use(jsonParser);
-const urlencodedParser = bodyParser.urlencoded({ extended: false });
-app.use(urlencodedParser);
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
 
 const pool = createPool({
   host: "mysql",
@@ -18,117 +16,145 @@ const pool = createPool({
   connectionLimit: 10,
 });
 
-const videos = [
-  //   { id: 1, likes: 10, name: "ando's funny video", views: 121 },
-  //   { id: 2, likes: 1420, name: "how to make paper planes", views: 42000 },
-  //   { id: 3, likes: 23099, name: "awesome flip", views: 929299 },
-];
+const endpoint = "/video/:id(\\d+)";
 
-const endPoint = "/videos/:id(\\d+)";
-
-// get videos
+/* -----------------------
+   GET all videos
+------------------------ */
 app.get("/videos", (req, res) => {
-  let sql = "select * from videos";
-  pool.query(sql, (err, results) => {
-    if (err) throw err;
+  pool.query("SELECT * FROM videos", (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Database error" });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ message: "No videos found" });
+    }
+
     res.json(results);
   });
 });
 
-// get video at id
-app.get(endPoint, (req, res) => {
-  let sql = "select * from videos where id = ?";
-  pool.query(sql, [req.params.id], (err, results) => {
-    if (err) throw err;
-    if (!results[0]) {
-      res.json({ status: "Not Found!" });
-    } else {
-      res.json(results[0]);
-    }
-  });
-});
-
-// add video
-app.post(endPoint, (req, res) => {
-  const schema = {
-    name: Joi.string().required(),
-    likes: Joi.number().required(),
-    views: Joi.number().required(),
-  };
-
-  const result = Joi.validate(req.body, schema);
-  if (result.error) {
-    return res.status(400).send(result.error.details[0].message); // can loop through all errors
-  }
-
-  const video = {
-    id: parseInt(req.params.id),
-    name: req.body.name,
-    likes: parseInt(req.body.likes),
-    views: parseInt(req.body.views),
-  };
-
-  let sql = "insert into videos (id, name, likes, views) values (?,?,?,?)";
+/* -----------------------
+   GET video by ID
+------------------------ */
+app.get(endpoint, (req, res) => {
   pool.query(
-    sql,
-    [req.params.id, req.body.name, req.body.likes, req.body.views],
+    "SELECT * FROM videos WHERE id = ?",
+    [req.params.id],
     (err, results) => {
-      if (err) throw err;
-      res.json(results);
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Database error" });
+      }
+
+      if (!results[0]) {
+        return res.status(404).json({ message: "Video not found" });
+      }
+
+      res.json(results[0]);
     }
   );
 });
 
-// update video - TODO: fix this
-app.put(endPoint, (req, res) => {
-  const video = videos.find((v) => v.id === parseInt(req.params.id));
-  if (!video) {
-    return res.status(404, "The video id was not found");
+/* -----------------------
+   CREATE / REPLACE video
+------------------------ */
+app.post(endpoint, (req, res) => {
+  const schema = Joi.object({
+    name: Joi.string().required(),
+    likes: Joi.number().required(),
+    views: Joi.number().required(),
+  });
+
+  const { error, value } = schema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ error: error.details[0].message });
   }
 
-  const schema = {
+  pool.query(
+    "REPLACE INTO videos (id, name, likes, views) VALUES (?, ?, ?, ?)",
+    [req.params.id, value.name, value.likes, value.views],
+    (err) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Database error" });
+      }
+
+      res.status(200).json({ message: "Video created/updated" });
+    }
+  );
+});
+
+/* -----------------------
+   UPDATE video (partial)
+------------------------ */
+app.put(endpoint, (req, res) => {
+  const schema = Joi.object({
     name: Joi.string(),
     likes: Joi.number(),
     views: Joi.number(),
-  };
-  const result = Joi.validate(req.body, schema);
+  }).min(1);
 
-  // TODO: concatenate and loop through values
-  if (result.value.name) {
-    let sql = "update videos set name = ? where id = ?";
-    pool.query(sql, [result.value.name, req.params.id], (err, results) => {
-      if (err) throw err;
-      console.log(results);
-    });
+  const { error, value } = schema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ error: error.details[0].message });
   }
-  if (result.value.likes) {
-    let sql = "update videos set likes = ? where id = ?";
-    pool.query(sql, [result.value.likes, req.params.id], (err, results) => {
-      if (err) throw err;
-      console.log(results);
-    });
-  }
-  if (result.value.views) {
-    let sql = "update videos set views = ? where id = ?";
-    pool.query(sql, [result.value.views, req.params.id], (err, results) => {
-      if (err) throw err;
-      console.log(results);
-    });
-  }
-});
 
-// delete video
-app.delete(endPoint, (req, res) => {
-  let sql = "delete from videos where id = ?";
-  pool.query(sql, [req.params.id], (err, results) => {
-    if (err) throw err;
-    res.json(results);
+  const fields = [];
+  const params = [];
+
+  for (const key in value) {
+    fields.push(`${key} = ?`);
+    params.push(value[key]);
+  }
+
+  params.push(req.params.id);
+
+  const sql = `UPDATE videos SET ${fields.join(", ")} WHERE id = ?`;
+
+  pool.query(sql, params, (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Database error" });
+    }
+
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ message: "Video not found" });
+    }
+
+    res.json({ message: "Video updated" });
   });
 });
 
-// HTTP Server endpoint
-const defaultPort = 5000;
-const portNo = process.env.PORT || defaultPort;
-app.listen(portNo, () => {
-  console.log(`Listening on port ${portNo}`);
+/* -----------------------
+   DELETE video
+------------------------ */
+app.delete(endpoint, (req, res) => {
+  pool.query(
+    "DELETE FROM videos WHERE id = ?",
+    [req.params.id],
+    (err, results) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Database error" });
+      }
+
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ message: "Video not found" });
+      }
+
+      res.json({ message: "Video deleted" });
+    }
+  );
 });
+
+/* -----------------------
+   Server
+------------------------ */
+const port = process.env.PORT || 5000;
+app.listen(port, () => {
+  console.log(`Listening on port ${port}`);
+});
+
