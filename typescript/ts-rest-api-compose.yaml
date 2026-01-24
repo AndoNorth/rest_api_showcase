@@ -1,0 +1,7 @@
+version: "3.9"
+
+services:
+  ts_rest_api:
+    image: ts_rest_api:latest
+    ports:
+      - "5000:5000"

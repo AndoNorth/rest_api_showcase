@@ -23,6 +23,11 @@ docker stack deploy -c ./rust/rust-rest-api-compose.yaml REST
 docker build ./javascript -f ./javascript/Dockerfile -t js_rest_api
 docker stack deploy -c ./javascript/js-rest-api-compose.yaml REST
 ```
+### typescript
+```sh
+docker build ./typescript -f ./typescript/Dockerfile -t ts_rest_api
+docker stack deploy -c ./typescript/ts-rest-api-compose.yaml REST
+```
 ### curl
 ```sh
 # get all
